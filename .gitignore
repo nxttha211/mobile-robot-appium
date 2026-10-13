@@ -1,0 +1,17 @@
+# Test output
+results/
+output.xml
+log.html
+report.html
+*.png
+
+# App binaries are downloaded, not committed
+apps/*.apk
+apps/*.ipa
+
+# Python
+.venv/
+__pycache__/
+
+# Local secrets
+.env

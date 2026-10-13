@@ -1,0 +1,73 @@
+name: Mobile Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Robot tag to run (smoke or regression)"
+        default: "smoke"
+
+jobs:
+  # Fast check on every push: syntax and keyword resolution, no device needed.
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: robot --dryrun --outputdir results/dryrun tests
+
+  # Real run on an Android emulator.
+  android:
+    needs: dry-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install Appium and test dependencies
+        run: |
+          npm install -g appium
+          appium driver install uiautomator2
+          pip install -r requirements.txt
+          python scripts/download_app.py
+
+      - name: Run tests on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: |
+            appium --log appium.log &
+            sleep 10
+            robot --include ${{ github.event.inputs.tags || 'smoke' }} --outputdir results tests
+
+      - name: Upload Robot report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-report
+          path: |
+            results/
+            appium.log
