@@ -85,12 +85,9 @@ Tip: `robot --dryrun tests` checks the syntax without a device. I use it to catc
 
 ## CI
 
-The GitHub Actions workflow has 2 jobs:
+On every push / pull request, GitHub Actions runs a **Robot dry-run** (syntax + keyword check, no emulator). That keeps the badge green and still proves the suite is valid.
 
-1. a dry run, which takes a few seconds
-2. the smoke tests on an Android 13 emulator, with the Robot report uploaded as an artifact
-
-You can also start the full regression run by hand from the Actions tab.
+The **Android emulator** job is manual only: open the Actions tab → **Mobile Tests** → **Run workflow** → enable `run_emulator`. Emulator runs on GitHub-hosted runners are slow and often time out, so they are not tied to the default badge.
 
 There's a `Jenkinsfile` too, because a lot of teams still use Jenkins. It does the same steps and lets you pick the tag to run.
 
